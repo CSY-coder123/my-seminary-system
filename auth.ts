@@ -1,8 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 
+// bcrypt 与 prisma 仅在 authorize 内动态导入，避免被 Edge (middleware) 打包导致构建失败
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
@@ -13,6 +12,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+        const { prisma } = await import("@/lib/prisma");
+        const { default: bcrypt } = await import("bcryptjs");
         const user = await prisma.user.findUnique({
           where: { email: String(credentials.email) },
         });
