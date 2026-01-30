@@ -1,0 +1,244 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =======================
+// 枚举定义 (Enums)
+// =======================
+
+enum Role {
+  ADMIN
+  FACULTY      // 教师 (严禁使用 TEACHER)
+  STUDENT
+  VISA_OFFICER // 签证官
+  FINANCE      // 财务
+  LIBRARIAN    // 图书管理员
+}
+
+enum Language {
+  CHINESE
+  ENGLISH
+  INDONESIAN
+}
+
+enum AssetStatus {
+  NORMAL
+  DAMAGED
+  REPAIRING
+  DISPOSED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+// =======================
+// 核心模型 (Models)
+// =======================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String    // 存放加密后的哈希值
+  role          Role      @default(STUDENT)
+  isMonitor     Boolean   @default(false) // 是否为班长
+  isInternational Boolean @default(false) // 用于标识该学生是否为国际生
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // 关系字段
+  cohort        Cohort?   @relation(fields: [cohortId], references: [id])
+  cohortId      String?
+  
+  // 教师关联
+  coursesTaught Course[]
+  
+  // 学生关联
+  submissions   Submission[]
+  attendance    Attendance[]
+  grades        Grade[]
+  borrowRecords BorrowRecord[]
+  dutyRecords DutyRecord[]      // 值日记录（多对多，被指派的值日）
+  attendancesRecorded Attendance[] @relation("RecordedBy") // 作为记录人录入的考勤
+  
+  // 签证关联 (1对1)
+  visaRecord    VisaRecord?
+  visaExpiry    DateTime? // 签证到期日
+  passportNumber String?  // 护照号
+
+  // 财务信息
+  tuitionPaid   Boolean   @default(false)
+}
+
+model Cohort {
+  id            String   @id @default(cuid())
+  name          String   // 例如 "2024 Spring Chinese"
+  startDate     DateTime
+  endDate       DateTime?
+
+  users         User[]
+  courses       Course[]
+  dutyRecords   DutyRecord[]
+}
+
+model Course {
+  id           String    @id @default(cuid())
+  code         String    // 例如 "THEO101"
+  name         String
+  credits      Int
+  description  String?
+  startDate    DateTime? // 学期开始（可选，兼容旧数据）
+  endDate      DateTime? // 学期结束（可选，兼容旧数据）
+  dayOfWeek    Int?      // 0=周日, 1=周一... 6=周六
+  startTime    String?   // "HH:mm" 例如 "09:00"
+  endTime      String?   // "HH:mm" 例如 "11:00"
+
+  cohort       Cohort   @relation(fields: [cohortId], references: [id])
+  cohortId     String
+
+  instructor   User?    @relation(fields: [instructorId], references: [id])
+  instructorId String?
+
+  submissions  Submission[]
+  grades       Grade[]
+  materials    CourseMaterial[]
+  attendance   Attendance[]
+
+  // 约束: 同一个班级内课程代码必须唯一
+  @@unique([cohortId, code])
+}
+
+// =======================
+// 教务扩展模块
+// =======================
+
+model Submission {
+  id        String   @id @default(cuid())
+  fileUrl   String   // 存放文件链接，不要存二进制
+  remarks   String?
+  score     Float?
+  
+  student   User     @relation(fields: [studentId], references: [id])
+  studentId String
+  
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+  
+  createdAt DateTime @default(now())
+}
+
+model CourseMaterial {
+  id        String   @id @default(cuid())
+  title     String
+  fileUrl   String
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  date      DateTime
+  status    AttendanceStatus  // PRESENT, ABSENT, LATE
+
+  student   User     @relation(fields: [studentId], references: [id])
+  studentId String
+
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+
+  recordedBy   User?   @relation("RecordedBy", fields: [recordedById], references: [id])
+  recordedById String? // 记录人（班长）ID
+
+  @@unique([studentId, courseId, date])
+}
+
+model DutyRecord {
+  id        String   @id @default(cuid())
+  date      DateTime // 值日日期
+
+  cohort    Cohort   @relation(fields: [cohortId], references: [id])
+  cohortId  String
+
+  assignees User[]   // 值日生（多选）
+
+  @@unique([cohortId, date])
+}
+
+model Grade {
+  id        String   @id @default(cuid())
+  score     Float    // 分数 (0-100)
+  letter    String?  // A, B, C...
+  feedback  String?  @db.Text // 评语
+
+  student   User     @relation(fields: [studentId], references: [id])
+  studentId String
+
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+
+  @@unique([studentId, courseId])
+}
+
+// =======================
+// 新增功能模块 (V4.0)
+// =======================
+
+// 1. 签证管理
+model VisaRecord {
+  id             String   @id @default(cuid())
+  passportNumber String
+  issueDate      DateTime
+  expiryDate     DateTime // 用于过期预警
+  documentUrl    String?  // 存储签证/护照扫描件的外部链接 (符合 Project Rules v2.1 文件存储规约)
+  status         String   // ACTIVE, EXPIRED, RENEWING
+  
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String   @unique
+}
+
+// 2. 资产管理
+model FixedAsset {
+  id           String      @id @default(cuid())
+  name         String
+  serialNumber String      @unique
+  category     String      // 电子设备, 家具...
+  status       AssetStatus @default(NORMAL)
+  purchasedAt  DateTime
+  price        Float?
+  
+  managerId    String?     // 负责人 ID (可选)
+}
+
+// 3. 图书管理
+model Book {
+  id          String   @id @default(cuid())
+  title       String
+  isbn        String?  @unique
+  author      String
+  isAvailable Boolean  @default(true)
+  
+  borrows     BorrowRecord[]
+}
+
+model BorrowRecord {
+  id         String    @id @default(cuid())
+  borrowDate DateTime  @default(now())
+  returnDate DateTime? // 空代表未还
+  dueDate    DateTime
+  
+  user       User      @relation(fields: [userId], references: [id])
+  userId     String
+  
+  book       Book      @relation(fields: [bookId], references: [id])
+  bookId     String
+}

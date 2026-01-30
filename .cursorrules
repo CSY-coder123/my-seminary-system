@@ -1,0 +1,34 @@
+# Seminary System Project Rules (v2.1)
+
+## 1. 技术栈强制约束 (CRITICAL)
+- **Framework**: Next.js 15 (App Router).
+- **ORM**: Prisma 6.2.1 (STRICTLY v6.x). 
+  - 🔴 **禁止**使用 `prisma.config.ts`。
+  - 🔴 **禁止**在 schema 中移除 `url = env(...)`。
+  - 🟢 **必须**在 `schema.prisma` 中使用 `datasource db { url = env("DATABASE_URL") }`。
+- **Auth**: Auth.js (NextAuth) v5.
+- **Validation**: Zod (用于所有 Server Actions 和 API 输入验证).
+
+## 2. 核心命名与业务规范
+- **角色命名**: 统一使用 `FACULTY` 指代教师。严禁使用 `TEACHER`。
+- **班长逻辑**: 班长不是 Role 枚举，而是 User 模型中的 `isMonitor (Boolean)` 字段。
+- **课程约束**: Course 必须归属 Cohort。`Course.code` 在 Cohort 内必须唯一。
+
+## 3. 深度 Bug 预防 (小白专项防御)
+- **数据库单例**: 必须通过 `@/lib/prisma` 导入单例实例。严禁在任何地方 `new PrismaClient()`，防止 HMR 连接溢出。
+- **缓存一致性**: Next.js 15 修改数据后，Server Actions 必须立即调用 `revalidatePath()`。
+- **文件存储规约**: 严禁将文件（作业、签证扫描件等）存到服务器本地目录。数据库仅允许存储文件 URL 字符串。
+- **时区与日期**: 数据库一律使用 UTC。前端渲染必须进行格式化处理，防止“日期提前一天”的显示 Bug。
+- **前后端隔离**: 
+  - 数据库查询代码严禁出现在带有 `"use client"` 的文件中。
+  - 交互式 UI（如 onClick 按钮）必须提取到专门的 Client Component 中。
+
+## 4. 文件结构与组织
+- 页面：`app/(protected)/dashboard/...`
+- 组件：`components/ui` (shadcn/ui), `components/business` (业务组件)
+- Actions: `app/lib/actions/...`
+- 环境变量: 始终将数据库连接放在根目录的 `.env` 文件中。
+
+## 5. 提示词上下文引导
+- 始终参考 **@PROJECT_SUMMARY.md** 了解最新的业务逻辑和模型定义。
+- 每次修改代码后，请对照上述规则进行自我核查。
