@@ -1,10 +1,11 @@
 import NextAuth from "next-auth";
 
 /**
- * 仅包含 session / callbacks / pages，无 providers。
- * 供 middleware 使用，避免 Edge 打包进 bcrypt / prisma。
+ * 仅包含 session / callbacks / pages；providers 留空以满足 NextAuthConfig 类型。
+ * 供 middleware 使用，避免 Edge 打包进 bcrypt / prisma。完整 providers 在 auth.ts。
  */
 const authConfig = {
+  providers: [] as const,
   session: { strategy: "jwt" as const, maxAge: 30 * 24 * 60 * 60 },
   callbacks: {
     jwt({ token, user }: { token: { id?: string; role?: string }; user?: { id?: string; role?: string } }) {
