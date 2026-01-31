@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
@@ -49,51 +49,59 @@ export default function LoginPage() {
   }
 
   return (
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle>登录</CardTitle>
+        <CardDescription>使用邮箱和密码登录神学院教务系统</CardDescription>
+      </CardHeader>
+      <form onSubmit={onSubmit}>
+        <CardContent className="space-y-4">
+          {error && (
+            <p className="text-sm text-destructive font-medium">{error}</p>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="email">邮箱 (Email)</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">密码 (Password)</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? "登录中..." : "登录"}
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
+  );
+}
+
+export default function LoginPage() {
+  return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>登录</CardTitle>
-          <CardDescription>使用邮箱和密码登录神学院教务系统</CardDescription>
-        </CardHeader>
-        <form onSubmit={onSubmit}>
-          <CardContent className="space-y-4">
-            {error && (
-              <p className="text-sm text-destructive font-medium">{error}</p>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">邮箱 (Email)</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">密码 (Password)</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? "登录中..." : "登录"}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+      <Suspense fallback={<div className="w-full max-w-md h-64 rounded-lg border bg-muted/30 animate-pulse" />}>
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }
