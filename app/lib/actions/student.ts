@@ -219,9 +219,10 @@ export async function recordAttendance(prevState: unknown, formData: FormData) {
   }
 
   const { courseId, date, entries } = parsed.data;
-  let list: { studentId: string; status: string }[];
+  const entrySchema = z.object({ studentId: z.string(), status: statusEnum });
+  let list: { studentId: string; status: "PRESENT" | "ABSENT" | "LATE" }[];
   try {
-    list = z.array(z.object({ studentId: z.string(), status: statusEnum })).parse(JSON.parse(entries));
+    list = z.array(entrySchema).parse(JSON.parse(entries)) as { studentId: string; status: "PRESENT" | "ABSENT" | "LATE" }[];
   } catch {
     return { error: "考勤数据格式有误" };
   }
