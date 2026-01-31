@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { auth } from "@/auth.config";
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
