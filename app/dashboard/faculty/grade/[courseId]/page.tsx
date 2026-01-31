@@ -48,13 +48,18 @@ export default async function FacultyGradePage({
     grades.map((g) => [g.studentId, { score: g.score, feedback: g.feedback ?? "" }])
   );
 
-  const rows = students.map((s) => ({
-    studentId: s.id,
-    name: s.name ?? "—",
-    email: s.email,
-    score: gradeByStudentId[s.id]?.score ?? "",
-    feedback: gradeByStudentId[s.id]?.feedback ?? "",
-  }));
+  const rows = students.map((s) => {
+    const rawScore = gradeByStudentId[s.id]?.score;
+    const score: number | "" =
+      rawScore === undefined || rawScore === null ? "" : Number(rawScore);
+    return {
+      studentId: s.id,
+      name: s.name ?? "—",
+      email: s.email,
+      score,
+      feedback: gradeByStudentId[s.id]?.feedback ?? "",
+    };
+  });
 
   return (
     <div className="min-h-screen bg-slate-50">
