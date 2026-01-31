@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import type { Session } from "next-auth";
 
 /**
  * 仅包含 session / callbacks / pages；providers 留空以满足 NextAuthConfig 类型。
@@ -15,7 +16,7 @@ const authConfig = {
       }
       return token;
     },
-    session({ session, token }: { session: { user?: { id?: string; role?: string } }; token: { id?: string; role?: string } }) {
+    session({ session, token }: { session: Session; token: { id?: string; role?: string } }) {
       if (session.user) {
         (session.user as { id?: string }).id = token.id as string;
         (session.user as { role?: string }).role = token.role as string;
