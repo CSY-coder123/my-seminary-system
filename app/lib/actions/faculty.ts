@@ -12,22 +12,27 @@ const gradeEntrySchema = z.object({
   feedback: z.string().max(2000).optional(),
 });
 
+export type GradeActionState = {
+  success?: boolean;
+  error?: string;
+};
+
 /** 教师：批量更新学生成绩（成绩管理页一键保存） */
 export async function updateStudentGrades(
-  prevState: unknown,
+  _prevState: GradeActionState | null,
   formData: FormData
-) {
+): Promise<GradeActionState> {
   const session = await auth();
   const userId = (session?.user as { id?: string })?.id;
   const role = (session?.user as { role?: string })?.role;
 
   if (!userId || role !== "FACULTY") {
-    return { error: "仅教师可操作" };
+    return { success: false, error: "仅教师可操作" };
   }
 
   const entriesJson = formData.get("entries");
   if (typeof entriesJson !== "string") {
-    return { error: "提交数据无效" };
+    return { success: false, error: "提交数据无效" };
   }
 
   let entries: { studentId: string; courseId: string; score: number; feedback?: string }[];
@@ -40,23 +45,23 @@ export async function updateStudentGrades(
       feedback: e.feedback?.trim() || undefined,
     }));
   } catch {
-    return { error: "数据格式有误，请检查分数是否在 0-100 之间" };
+    return { success: false, error: "数据格式有误，请检查分数是否在 0-100 之间" };
   }
 
   if (entries.length === 0) {
-    return { error: "没有可保存的成绩" };
+    return { success: false, error: "没有可保存的成绩" };
   }
 
   const courseId = entries[0].courseId;
   if (entries.some((e) => e.courseId !== courseId)) {
-    return { error: "只能提交同一门课程的成绩" };
+    return { success: false, error: "只能提交同一门课程的成绩" };
   }
 
   const course = await prisma.course.findFirst({
     where: { id: courseId, instructorId: userId },
   });
   if (!course) {
-    return { error: "无权操作该课程" };
+    return { success: false, error: "无权操作该课程" };
   }
 
   try {
@@ -84,6 +89,6 @@ export async function updateStudentGrades(
     return { success: true };
   } catch (e) {
     console.error("保存成绩失败:", e);
-    return { error: "保存失败，请稍后重试" };
+    return { success: false, error: "保存失败，请稍后重试" };
   }
 }

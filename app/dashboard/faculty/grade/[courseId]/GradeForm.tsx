@@ -15,6 +15,11 @@ export type GradeRow = {
   feedback: string;
 };
 
+type ActionState = {
+  success?: boolean;
+  error?: string;
+};
+
 type GradeFormProps = {
   courseId: string;
   initialRows: { studentId: string; name: string; email: string; score: number | ""; feedback: string }[];
@@ -23,7 +28,10 @@ type GradeFormProps = {
 export function GradeForm({ courseId, initialRows }: GradeFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [state, formAction] = useActionState(updateStudentGrades, null);
+  const [state, formAction] = useActionState<ActionState, FormData>(
+    updateStudentGrades,
+    { success: false }
+  );
   const [rows, setRows] = useState<GradeRow[]>(
     initialRows.map((r) => ({
       ...r,
