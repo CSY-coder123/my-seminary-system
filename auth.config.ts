@@ -29,5 +29,7 @@ const authConfig: NextAuthConfig = {
   },
 };
 
-export const auth = NextAuth(authConfig);
+const nextAuth = NextAuth(authConfig);
+/** Middleware 用：可调用的 auth 包装函数，用于 auth((req) => ...) */
+export const auth = nextAuth.auth;
 export { authConfig };
