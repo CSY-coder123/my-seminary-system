@@ -29,6 +29,8 @@ export type MonitorPanelCardProps = {
   existingAttendance?: ExistingAttendanceItem[];
 };
 
+type ActionState = { success?: boolean; error?: string };
+
 const STATUS_OPTIONS = [
   { value: "PRESENT", label: "出勤" },
   { value: "ABSENT", label: "缺勤" },
@@ -51,8 +53,14 @@ export function MonitorPanelCard({
   existingAttendance = [],
 }: MonitorPanelCardProps) {
   const router = useRouter();
-  const [dutyState, dutyAction, isDutyPending] = useActionState(assignDuty, null);
-  const [attState, attAction, isAttPending] = useActionState(recordAttendance, null);
+  const [dutyState, dutyAction, isDutyPending] = useActionState<ActionState, FormData>(
+    assignDuty,
+    { success: false }
+  );
+  const [attState, attAction, isAttPending] = useActionState<ActionState, FormData>(
+    recordAttendance,
+    { success: false }
+  );
   const [attCourseId, setAttCourseId] = useState("");
   const [attDate, setAttDate] = useState(todayDateString());
   const [attEntries, setAttEntries] = useState<Record<string, "PRESENT" | "ABSENT" | "LATE">>({});
